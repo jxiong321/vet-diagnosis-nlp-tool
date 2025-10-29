@@ -13,21 +13,21 @@ def get_wiki_links(title: str):
         "action": "query",
         "format": "json",
         "prop": "links",
-        "titles": title,        # page title
-        "pllimit": "max",       # give as many links as possible
-        "plnamespace": "0",     # only get the actual articles
-        "redirects": "1",       # follow redirects (aka shortcut pages)
+        "titles": title,        #page title
+        "pllimit": "max",       #give as many links as possible
+        "plnamespace": "0",     #only get the actual articles
+        "redirects": "1",       #follow redirects
         "formatversion": "2"
     }
     links = []
 
     while True:
         r = session.get(API, params=params, headers={"User-Agent": UA}, timeout=20)
-        r.raise_for_status()  # raise if not 200
+        r.raise_for_status() 
         try:
             data = r.json()
         except ValueError:
-            # Debug aid: print first part of response to see HTML error page
+            # Debug help: print first part of response to see HTML error page
             print("Non-JSON response head:\n", r.text[:500])
             raise
 
@@ -35,7 +35,6 @@ def get_wiki_links(title: str):
         if pages and "links" in pages[0]:
             links.extend(link["title"] for link in pages[0]["links"])
 
-        # handle pagination
         cont = data.get("continue")
         if not cont:
             break
@@ -44,10 +43,10 @@ def get_wiki_links(title: str):
 
     return links
 
-#Use the exact page title
+#Use the page title
 page_title = "List of dog diseases"
 print("Page title check:")
-print(wiki.page(page_title).title)  # should print "List of dog diseases"
+print(wiki.page(page_title).title)  #should print "List of dog diseases"
 
 dog_disease_links = get_wiki_links(page_title)
 print(f"Found {len(dog_disease_links)} links.")

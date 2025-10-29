@@ -1,0 +1,21 @@
+{
+  "users": [
+    {
+      "name": "Jess",
+      "age": 22,
+      "pets": [
+        "dog",
+        "cat",
+        "fish",
+        "shrimp"
+      ]
+    },
+    {
+      "name": "Chelsea",
+      "age": 25,
+      "pets": [
+        "cat"
+      ]
+    }
+  ]
+}

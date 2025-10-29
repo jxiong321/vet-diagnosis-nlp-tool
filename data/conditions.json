@@ -1,0 +1,21 @@
+{
+    "canine parvovirus": ["parvo", "cpv"],
+    "kennel cough": ["infectious tracheobronchitis", "bordetella", "cird", "canine cough"],
+    "canine distemper": ["distemper", "cdv"],
+    "heartworm disease": ["heartworm", "dirofilaria", "dirofilariasis"],
+    "pancreatitis": ["pancreatic inflammation"],
+    "gastroenteritis": ["stomach flu", "gi inflammation"],
+    "giardiasis": ["giardia"],
+    "leptospirosis": ["lepto"],
+    "otitis externa": ["ear infection", "outer ear infection"],
+    "dermatophytosis": ["ringworm"],
+    "flea allergy dermatitis": ["fad", "flea allergy"],
+    "atopic dermatitis": ["atopy", "environmental allergies"],
+    "diabetes mellitus": ["diabetes", "dm"],
+    "hyperadrenocorticism": ["cushing's", "cushings", "cushing disease"],
+    "hypoadrenocorticism": ["addison's", "addisons", "addison disease"],
+    "chronic kidney disease": ["ckd", "chronic renal failure", "renal disease"],
+    "gastric dilatation-volvulus": ["gdv", "bloat", "twisted stomach"],
+    "pyometra": ["uterine infection"]
+  }
+  
