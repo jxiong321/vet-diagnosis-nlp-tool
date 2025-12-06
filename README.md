@@ -47,3 +47,28 @@ and found that increasing to 5 from 1 increased accuracy to 53.3%.
 - I felt a bit ahead so i also went ahead and started on the final checkpoint which is checking the weights, so in run_evaluation.py I also added a test for testing different weight combinations. It boosts the accuracy if the retrieval is weighted heavier. However, i will definitely keep looking into that I think I still need to add more data and possibly test some edge cases.
 
 How to run: run the script for run_evaluation.py
+
+Final Update:
+
+Goals:
+- Tune the rule-based scorer: adjust the rule weights on a validation split
+- Make an LLM summarizer: eg feed the input symptoms into the top-k retrieved packages to a local model like GPT-2 and get simple summaries (so the output to the patient isn’t just “60% Flu” or something, but instead “based on the … symptoms, (name of pet) is X% likely to have disease X based on the relevant section of the textbook.”
+- Make sure this is not a black box LLM: for 'summaries: use templated text + extracted evidence sentences (top 1-2 sentences from retrieved passages) rather than LLM generation
+- Output a score table per diagnosis: the retriever score, the rules score, classifier prob (and an interpreter: like make LLM interpret the outputs for doctors who are bad at stats) and also a final score. Show weights and let the doctor toggle them (MAYBE)
+- I will build a basic interface using Streamlit that the user can intake patent notes and get ranked possible diagnoses with short explanations
+
+comments: 
+- I ended up not including the LLM summarizer even though it was in my original goals. After thinking about it more, I realized integrating an LLM  would introduce a lot of extra complexity without adding much interpretability.
+- Local LLMs don’t perform well on biomedical summarization unless heavily fine-tuned.
+- Fine-tuning would require a dataset I don’t have, and zero-shot summaries tend to hallucinate clinical details, which completely defeats the purpose of making this tool safe.
+Because my project is centered around interpretable diagnosis, not generation, I decided it was better to stick to deterministic, evidence-based summaries using templated text + extracted evidence sentences, which keeps the system transparent.
+It also keeps the tool lightweight and runnable on any machine without GPU requirements.
+
+I focused instead on improving the fusion of the three components (retriever + classifier + rules). I added adjustable weight combinations in run_evaluation.py, so I can systematically search for which blend performs best. In every experiment, weighting retrieval slightly higher consistently boosted accuracy this makes sense because the retrieval system was trained on real veterinary text while the classifier was trained on simplified synthetic data.
+
+I also spent time cleaning and expanding the structured converter. User input is extremely messy (“my dog is puking a lot”, “my old lab keeps sneezing”), so the converter now normalizes species, maps synonyms to the controlled vocab, extracts age/breed/gender fields when possible, and outputs a strictly formatted vector the classifier can consume. This made the downstream evaluation far more reliable.
+
+The rule-based scorer is now more robust. While I didn’t implement symptom-overlap rules this week, I kept the baseline fixed weights (1/3 each), because overlap is already encoded in both the retrieval and classifier pathways. I think adding separate symptom rules will matter only after I calibrate final weights, which I started this week.
+For interpretability, I also added simple natural-language explanations for each prediction. Instead of LLM generation, the final output now surfaces the top evidence sentences from the retrieved paragraphs and plugs them into a short template (“Based on the symptoms X, the most relevant condition is Y because…”). This keeps the system readable but grounded in actual text.
+
+I also created a simple Streamlit interface that lets the user type in symptoms and see the ranked diagnoses, the evidence-based explanation, and the underlying scores (retriever, rules, classifier, and the blended final score). It’s minimal, but it demonstrates how a practitioner might interact with the tool without needing to run Python scripts manually.

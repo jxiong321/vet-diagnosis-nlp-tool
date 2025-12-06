@@ -1,5 +1,4 @@
 """
-Functions:
 - load_vocab(): load two JSON vocab files, build synonym->canonical map
 - build_replacement_regex(): compile longest-first, whole-word, case-insensitive pattern
 - normalize_text(): lowercase -> hyphen->space -> phrase replace -> strip punctuation -> collapse whitespace
@@ -15,7 +14,6 @@ from typing import Dict, Tuple, List
 _WORD_RE = re.compile(r"[A-Za-z0-9']+")
 
 def load_vocab(symptoms_path:str, conditions_path:str) -> dict:
-    #read the two json files
     with open(conditions_path, 'r') as file:
         conditions = json.load(file)
     with open(symptoms_path, 'r') as file:

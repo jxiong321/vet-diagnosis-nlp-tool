@@ -36,7 +36,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-# ============ Utility Parsers (robust if your CSV still has strings like "39.5°C" / "3 days") ============
+# utility parsers
 
 def parse_temperature_c(x):
     if pd.isna(x):
@@ -72,7 +72,7 @@ def yesno_to_int(x):
         return 0
     return 0
 
-# ============ Feature Engineering ============
+# feature engineering
 
 # def engineer_features(df, binary_cols):
 #     """Add clinically meaningful feature combinations."""
@@ -125,11 +125,10 @@ def yesno_to_int(x):
     
 #     return df
 
-# ============ Custom Transformers ============
 
 class SymptomMultiHot(BaseEstimator, TransformerMixin):
-    """Build a multi-hot matrix from columns Symptom_1..Symptom_4 (or any provided list).
-    Vocabulary is learned on fit(X_train) only, preventing leakage.
+    """Build a multi-hot matrix from columns Symptom_1..Symptom_4
+    Vocabulary is learned on fit(X_train) only
     """
 
     def __init__(self, symptom_cols: List[str]):
@@ -197,7 +196,7 @@ class MulticlassTargetEncoder(BaseEstimator, TransformerMixin):
         self.m = m
         self.center = center
         self.random_state = random_state
-        # Learned attributes
+        #attributes
         self.classes_: List[Any] = []
         self.priors_: np.ndarray | None = None  # shape (K,)
         self.mapping_: Dict[Any, np.ndarray] = {}  # category -> probs (K,)
@@ -225,8 +224,8 @@ class MulticlassTargetEncoder(BaseEstimator, TransformerMixin):
         counts_global = np.bincount(y_idx, minlength=K)
         self.priors_ = counts_global / counts_global.sum()
 
-        # Prepare OOF encodings (not returned here; we just learn mapping on full train afterwards)
-        # Learn mapping on FULL training data for transform-time use with smoothing.
+        # Prepare OOF encodings
+        # Learn mapping on full training data for transform-time use with smoothing.
         # Category -> class counts
         cts: Dict[Any, np.ndarray] = {}
         totals: Dict[Any, int] = {}
@@ -241,7 +240,7 @@ class MulticlassTargetEncoder(BaseEstimator, TransformerMixin):
         for cat, vec in cts.items():
             self.mapping_[cat] = self._smoothed(vec, totals[cat])
 
-        # Output columns
+        #utput columns
         self.out_colnames_ = [f"{self.prefix}::{c}" for c in self.classes_]
         return self
 
@@ -270,19 +269,17 @@ class MulticlassTargetEncoder(BaseEstimator, TransformerMixin):
         return self.out_colnames_
 
 
-# ============ Main training routine ============
+# Training
 
 def main():
-    # Load dataset directly without needing command-line arguments
     test_size = 0.25
     random_state = 42
-    m_value = 20.0  # Smoothing strength for target encoding
+    m_value = 20.0 
 
     df = pd.read_csv('/Users/jessicaxiong/vet-diagnosis-nlp-tool/data/cleaned_animal_disease_prediction.csv')
     
     target_col = 'Disease_Prediction'
     
-    # Add after loading the CSV, before filtering
     disease_mapping = {
         'Parvovirus': 'Canine Parvovirus',
         'Distemper': 'Canine Distemper',
@@ -309,7 +306,7 @@ def main():
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors='coerce')
 
-    # print("\n🔧 Engineering features...")
+    # print("\n Engineering features...")
     # df = engineer_features(df, binary_cols)
 
     # # Create list of all binary columns including engineered ones
@@ -388,7 +385,7 @@ def main():
     with open('trained_classifier.pkl', 'wb') as f:
         pickle.dump(pipe, f)
 
-    print("\n✅ Classifier saved to trained_classifier.pkl")
+    print("\nClassifier saved to trained_classifier.pkl")
 
 if __name__ == '__main__':
     main()

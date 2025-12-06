@@ -1,180 +1,176 @@
-"""
-blended_system.py
-
-Combines retrieval + classifier + rules into a unified diagnosis system.
-Evaluates all components individually and blended to compare results
-"""
+# combines retrieval + classifier + rules into one system
+# also has evaluation code to compare them
 
 import json
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
-from symptom_extractor import SymptomExtractor
-from rule_based_scorer import RuleBasedScorer
+from src.symptom_extractor import SymptomExtractor
+from src.rule_based_scorer import RuleBasedScorer
 
 
 class BlendedDiagnosisSystem:
-    """
-    Integrates BM25 retrieval, ML classifier, and rule-based validation
-    """
-    
+    # this class puts together all 3 components (BM25, classifier, rules)
+
     def __init__(self, retriever, classifier, weights=None):
-        """
-        Args:
-            retriever: bm25_retriever.py
-            classifier: log_regression.py
-            weights: Dict with keys 'retrieval', 'classifier', 'rules' (currently at default equal weight)
-        """
         self.retriever = retriever
         self.classifier = classifier
         self.symptom_extractor = SymptomExtractor()
         self.rule_scorer = RuleBasedScorer()
-        
-        # Default: equal weights (adjust in future)
-        self.weights = weights or {
-            'retrieval': 1/3,
-            'classifier': 1/3,
-            'rules': 1/3
-        }
-        
-        print(f"✅ Blended system initialized with weights: {self.weights}")
-    
-    def diagnose(self, query: str, top_k: int = 3) -> Dict:
-        """
-        Run all 3 systems and blend their scores.
-        """
-        # STEP 1: Get retrieval scores (returns list of tuples)
+
+        # start with equal weights (1/3 each) if not specified
+        if weights is None:
+            self.weights = {
+                'retrieval': 1/3,
+                'classifier': 1/3,
+                'rules': 1/3
+            }
+        else:
+            self.weights = weights
+
+        print(f"Initialized blended system with weights: {self.weights}")
+
+    def set_weights(self, weights):
+        self.weights = weights
+
+    def diagnose(self, query, top_k=3):
+        # run all 3 systems and blend their scores
+
+        # Get retrieval scores (sometimes returns list of tuples, sometimes dict)
         retrieval_result = self.retriever.disease_scores(query)
-        
-        # convert list of tuples to dict
+
+        # convert to dict if needed
         if isinstance(retrieval_result, list):
             retrieval_scores = {disease: score for disease, score in retrieval_result}
         elif isinstance(retrieval_result, dict):
             retrieval_scores = retrieval_result
         else:
             retrieval_scores = {}
-        
+
         retrieval_scores = self._normalize_scores(retrieval_scores)
-        
-        # STEP 2: Extract structured features from query
+
+        # Extract structured features from query
         features = self.symptom_extractor.extract_features(query)
-        
-        #STEP 3: Get classifier predictions
+
+        # Get classifier predictions
         classifier_scores = self._get_classifier_scores(features)
-        
-        # STEP 4: Get rule valida=tion scores
+
+        # Get rule validation scores
         all_diseases = set(retrieval_scores.keys()) | set(classifier_scores.keys())
         rule_scores = self.rule_scorer.score_all_diseases(features, list(all_diseases))
-        
-        # STEP 5: Blend all three
+
+        # Blend all three
         blended_scores = self._blend_scores(retrieval_scores, classifier_scores, rule_scores)
-        
-        # STEP 6: Get top-k for each system
+
+        # Normalize all scores for consistent disease names (lowercase everything)
+        retrieval_scores_normalized = {self._normalize_disease_name(d): s for d, s in retrieval_scores.items()}
+        classifier_scores_normalized = {self._normalize_disease_name(d): s for d, s in classifier_scores.items()}
+        rule_scores_normalized = {self._normalize_disease_name(d): s for d, s in rule_scores.items()}
+
+        # Get top-k for each system
         results = {
             'query': query,
-            'retrieval_top': self._get_top_k(retrieval_scores, top_k),
-            'classifier_top': self._get_top_k(classifier_scores, top_k),
-            'rules_top': self._get_top_k(rule_scores, top_k),
+            'retrieval_top': self._get_top_k(retrieval_scores_normalized, top_k),
+            'classifier_top': self._get_top_k(classifier_scores_normalized, top_k),
+            'rules_top': self._get_top_k(rule_scores_normalized, top_k),
             'blended_top': self._get_top_k(blended_scores, top_k),
-            'retrieval_scores': retrieval_scores,
-            'classifier_scores': classifier_scores,
-            'rule_scores': rule_scores,
+            'retrieval_scores': retrieval_scores_normalized,
+            'classifier_scores': classifier_scores_normalized,
+            'rule_scores': rule_scores_normalized,
             'blended_scores': blended_scores,
             'features': features
         }
-        
+
         return results
     
-    def _get_classifier_scores(self, features: Dict) -> Dict[str, float]:
-        """
-        Get disease probabilities from classifier.
-        """
-        # Convert features dict to DataFrame
+    def _get_classifier_scores(self, features):
+        # get disease probabilities from the classifier
         X = pd.DataFrame([features])
-        
-        # Get predictions
+
         try:
             probs = self.classifier.predict_proba(X)[0]
             classes = self.classifier.classes_
             return dict(zip(classes, probs))
         except Exception as e:
-            print(f"⚠️  Classifier error: {e}")
+            print(f"Classifier error: {e}")
             return {}
-    
-    def _normalize_scores(self, scores: Dict[str, float]) -> Dict[str, float]:
-        """Normalize scores to 0-1 range using min-max scaling."""
+
+    def _normalize_scores(self, scores):
+        # normalize scores to 0-1 range using min-max scaling
         if not scores:
             return {}
-        
+
         values = list(scores.values())
         min_val = min(values)
         max_val = max(values)
-        
+
         if max_val == min_val:
             return {k: 0.5 for k in scores}
-        
+
         return {
             k: (v - min_val) / (max_val - min_val)
             for k, v in scores.items()
         }
-    
-    def _blend_scores(self, retrieval: Dict, classifier: Dict, rules: Dict) -> Dict[str, float]:
-        """
-        Weighted average of all 3 systems.
-        """
+
+    def _normalize_disease_name(self, disease):
+        return disease.lower()
+
+    def _blend_scores(self, retrieval, classifier, rules):
+        # weighted average of all 3 systems
+        # normalize disease names first to avoid duplicates like "Canine parvovirus" vs "Canine Parvovirus"
+        retrieval = {self._normalize_disease_name(d): s for d, s in retrieval.items()}
+        classifier = {self._normalize_disease_name(d): s for d, s in classifier.items()}
+        rules = {self._normalize_disease_name(d): s for d, s in rules.items()}
+
         all_diseases = set(retrieval.keys()) | set(classifier.keys()) | set(rules.keys())
-        
+
         blended = {}
         for disease in all_diseases:
             r_score = retrieval.get(disease, 0)
             c_score = classifier.get(disease, 0)
             ru_score = rules.get(disease, 0)
-            
-            #If the rules block it (score=0), the entire blended score becomes 0
+
+            # if rules block it (score=0), entire blended score becomes 0
             if ru_score == 0:
                 blended[disease] = 0.0
             else:
-                # Weighted average
+                # weighted average
                 blended[disease] = (
                     self.weights['retrieval'] * r_score +
                     self.weights['classifier'] * c_score +
                     self.weights['rules'] * ru_score
                 )
-        
+
         return blended
-    
-    def _get_top_k(self, scores: Dict[str, float], k: int) -> List[str]:
-        """Get top-k diseases from score dict."""
+
+    def _get_top_k(self, scores, k):
         sorted_items = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         return [disease for disease, score in sorted_items[:k]]
-    
-    def print_results(self, results: Dict):
-        """Pretty print diagnosis results."""
+
+    def print_results(self, results):
         print(f"\n{'='*70}")
         print(f"DIAGNOSIS: '{results['query']}'")
         print(f"{'='*70}\n")
-        
-        print("📊 Top-3 Predictions by System:\n")
-        
+
+        print("Top-3 Predictions by System:\n")
+
         systems = [
             ('Retrieval Only', results['retrieval_top']),
             ('Classifier Only', results['classifier_top']),
             ('Rules Only', results['rules_top']),
             ('Blended', results['blended_top'])
         ]
-        
+
         for system_name, top_diseases in systems:
-            print(f"{system_name:20s} → {', '.join(top_diseases)}")
-        
+            print(f"{system_name:20s} -> {', '.join(top_diseases)}")
+
         print(f"\n{'='*70}\n")
 
 
 class SystemEvaluator:
-    """
-    Evaluates all systems on test cases and generates comparison table.
-    """
-    
-    def __init__(self, blended_system: BlendedDiagnosisSystem):
+    # evaluates all systems on test cases and generates comparison table
+
+    def __init__(self, blended_system):
         self.system = blended_system
     
     def evaluate(self, test_cases: List[Dict]) -> Dict:
@@ -254,36 +250,36 @@ class SystemEvaluator:
         
         return results
     
-    def print_comparison_table(self, results: Dict):
-        """Print formatted comparison table for your report."""
+    def print_comparison_table(self, results):
+        # print formatted comparison table
         print(f"\n{'='*70}")
-        print("📊 SYSTEM COMPARISON TABLE (Week 7 Results)")
+        print("SYSTEM COMPARISON TABLE")
         print(f"{'='*70}\n")
-        
+
         print(f"{'System':<30} {'Top-3 Accuracy':>15} {'Correct/Total':>15}")
         print("-" * 70)
-        
+
         baseline_acc = results['Retrieval Only']['top3_accuracy']
-        
+
         for system_name, metrics in results.items():
             acc = metrics['top3_accuracy']
             correct = metrics['correct_count']
             total = metrics['total']
-            
-            # Get improvement over baseline
+
+            # get improvement over baseline
             if system_name == 'Retrieval Only':
                 improvement = ""
             else:
                 diff = acc - baseline_acc
                 improvement = f"({diff:+.3f})"
-            
+
             print(f"{system_name:<30} {acc:>15.3f} {correct:>6}/{total:<6} {improvement}")
-        
+
         print("=" * 70)
-        
-        # Determine winner
+
+        # determine winner
         winner = max(results.items(), key=lambda x: x[1]['top3_accuracy'])
-        print(f"\n🏆 Best System: {winner[0]}")
+        print(f"\nBest System: {winner[0]}")
         print(f"   Top-3 Accuracy: {winner[1]['top3_accuracy']:.3f}")
 
         print()

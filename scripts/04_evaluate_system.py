@@ -29,7 +29,7 @@ def main():
     print("="*70 + "\n")
     
     # ============ STEP 1: Load Retrieval System ============
-    print("📚 Loading retrieval system...")
+    print("Loading retrieval system...")
     retriever = BM25Retriever(
         symptoms_path="data/symptoms.json",
         conditions_path="data/conditions.json"
@@ -37,13 +37,13 @@ def main():
     
     passages = load_jsonl("data/passages.jsonl")
     retriever.index(passages)
-    print(f"✅ Indexed {len(passages)} passages\n")
+    print(f"Indexed {len(passages)} passages\n")
     
     # ============ STEP 2: Load Trained Classifier ============
-    print("🤖 Loading trained classifier...")
+    print("Loading trained classifier...")
     with open('trained_classifier.pkl', 'rb') as f:
         classifier = pickle.load(f)
-    print("✅ Loaded classifier from trained_classifier.pkl\n")
+    print("Loaded classifier from trained_classifier.pkl\n")
     
     # ============ STEP 3: Create Blended System ============
     print("🔧 Creating blended diagnosis system...")
@@ -60,7 +60,7 @@ def main():
     
     # ============ STEP 4: Test Single Query ============
     print("="*70)
-    print("🧪 TESTING SINGLE QUERY")
+    print("TESTING SINGLE QUERY")
     print("="*70 + "\n")
     
     test_query = "puppy has bloody diarrhea and is vomiting"
@@ -69,7 +69,7 @@ def main():
     
     # ============ STEP 5: Run Full Evaluation ============
     print("="*70)
-    print("📊 RUNNING FULL EVALUATION")
+    print("RUNNING FULL EVALUATION")
     print("="*70 + "\n")
     
     # Load test cases
@@ -87,7 +87,7 @@ def main():
     
     # ============ STEP 6: Test Different Weight Combinations ============
     print("\n" + "="*70)
-    print("🔬 TESTING DIFFERENT WEIGHT COMBINATIONS")
+    print("TESTING DIFFERENT WEIGHT COMBINATIONS")
     print("="*70 + "\n")
     
     weight_configs = [
@@ -114,7 +114,7 @@ def main():
         print(f"   → Top-3 Accuracy: {blended_acc:.3f}\n")
     
     print("="*70)
-    print("✅ EVALUATION COMPLETE!")
+    print("EVALUATION COMPLETE!")
     print("="*70 + "\n")
 
 

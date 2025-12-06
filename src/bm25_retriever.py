@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Any, Optional
 import math
-from normalize import (
+from src.normalize import (
     load_vocab,
     build_replacement_regex,
     normalize_text,
@@ -68,9 +68,8 @@ class BM25Index:
         self.N = len(self.passages) if self.passages else 0
         self.avgdl = (sum(self.doc_len) / self.N) if self.N > 0 else 0.0
 
-    # -------- Scoring --------
+    # Scoring
     def _idf(self, term: str) -> float:
-        #Okapi IDF
         df = self.df.get(term, 0)
         return math.log((self.N - df + 0.5) / (df + 0.5) + 1.0) if self.N > 0 else 0.0
 
@@ -98,10 +97,9 @@ class BM25Retriever:
         # vocab + replace
         self.syn2can = load_vocab(symptoms_path, conditions_path)
         self.repl_pat = build_replacement_regex(self.syn2can)
-        #index
         self.idx = BM25Index(k1=k1, b=b)
 
-    # ---------- Public API ----------
+    # Public api 
     def index(self, passages: List[Dict[str, Any]]) -> None:
         """Build the BM25 index from raw passage dicts."""
         self.idx.build(passages, self.syn2can, self.repl_pat)
@@ -119,7 +117,6 @@ class BM25Retriever:
 
     @staticmethod
     def _snippet(text: str, qnorm: str, width: int = 200) -> str:
-        """Return a short snippet centered near first query token; fall back to head."""
         #Use the first token from normalized query that is >= 3 chars
         q_tokens = [t for t in qnorm.split() if len(t) >= 3]
         if not q_tokens:
